@@ -8,6 +8,10 @@ Created on 2024
 
 import sqlite3
 
+# Variable global
+# Global variable
+NAME = 'ups_data.db'
+
 # Inicializar la base de datos
 # Initialize the database
 
@@ -42,7 +46,7 @@ def init_db():
 def save_status(data):
     # Conectar a la base de datos
     # Connect to the database
-    conn = sqlite3.connect('ups_data.db')
+    conn = sqlite3.connect(NAME)
     cursor = conn.cursor()
 
     # Insertar los datos en la tabla
@@ -57,7 +61,7 @@ def save_status(data):
 
 
 def last_24():
-    conn = sqlite3.connect('ups_data.db')
+    conn = sqlite3.connect(NAME)
     cursor = conn.cursor()
     cursor.execute('''
         SELECT timestamp, output_voltage, battery_charge, ups_load
@@ -65,6 +69,25 @@ def last_24():
     ''')
     data = cursor.fetchall()
     conn.close()
+    return data
+
+
+def last():
+    conn = sqlite3.connect(NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        '''SELECT * FROM ups_status ORDER BY timestamp DESC LIMIT 1''')
+    row = cursor.fetchone()
+    conn.close()
+    data = {
+        "timestamp": row[0],
+        "battery_charge": row[1],
+        "battery_voltage": row[2],
+        "input_voltage": row[3],
+        "output_voltage": row[4],
+        "ups_load": row[5],
+        "ups_status": row[6]
+    }
     return data
 
 

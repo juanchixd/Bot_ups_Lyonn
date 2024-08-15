@@ -13,6 +13,7 @@ import threading
 import time
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import complements.api as api
 import complements.sql as sql
 from dotenv import load_dotenv, dotenv_values
 from subprocess import Popen, PIPE
@@ -22,6 +23,9 @@ load_dotenv()
 previous_status = None
 TOKEN = os.getenv('TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
+
+# Inicializar la api / Initialize the api
+threading.Thread(target=api.main, daemon=True).start()
 
 # Inicializar el bot de Telegram / Initialize the Telegram bot
 bot = telebot.TeleBot(TOKEN)
@@ -153,10 +157,10 @@ def send_graph(message):
         plt.plot(timestamps, output_voltages,
                  label='Voltaje de salida (V)', color='blue')
         plt.ylabel('Voltaje (V)')
-        plt.xticks(rotation=45)
         plt.grid(True)
         plt.gca().xaxis.set_major_locator(locator)
         plt.gca().xaxis.set_major_formatter(formatter)
+        plt.gca().xaxis.set_ticklabels([])
 
         # Marcar el punto máximo y mínimo del voltaje de salida / Mark the maximum and minimum output voltage point
         max_voltage = max(output_voltages)
@@ -175,10 +179,10 @@ def send_graph(message):
         plt.plot(timestamps, battery_charges,
                  label='Carga de la batería (%)', color='green')
         plt.ylabel('Carga (%)')
-        plt.xticks(rotation=45)
         plt.grid(True)
         plt.gca().xaxis.set_major_locator(locator)
         plt.gca().xaxis.set_major_formatter(formatter)
+        plt.gca().xaxis.set_ticklabels([])
 
         # Marcar el punto máximo y mínimo de la carga de la batería / Mark the maximum and minimum battery charge point
         max_charge = max(battery_charges)

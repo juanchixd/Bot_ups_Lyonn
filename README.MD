@@ -1,6 +1,6 @@
 # Lyonn UPS Telegram Bot
 
-[![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Lyonn_UPS_bot) [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org) [![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org) [![NUT](https://img.shields.io/badge/NUT-000000?style=for-the-badge&logo=linux&logoColor=white)](https://networkupstools.org) [![Proxmox](https://img.shields.io/badge/Proxmox-4D4D4D?style=for-the-badge&logo=proxmox&logoColor=white)](https://www.proxmox.com) [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/juanchixd/Bot_ups_Lyonn)
+[![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Lyonn_UPS_bot) [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org) [![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org) [![NUT](https://img.shields.io/badge/NUT-000000?style=for-the-badge&logo=linux&logoColor=white)](https://networkupstools.org) [![Proxmox](https://img.shields.io/badge/Proxmox-4D4D4D?style=for-the-badge&logo=proxmox&logoColor=white)](https://www.proxmox.com) [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/juanchixd/Bot_ups_Lyonn) [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 
 ![Status](https://img.shields.io/badge/Status-stable-green) ![GitHub issues](https://img.shields.io/github/issues/juanchixd/Bot_ups_Lyonn) ![GitHub forks](https://img.shields.io/github/forks/juanchixd/Bot_ups_Lyonn) ![GitHub stars](https://img.shields.io/github/stars/juanchixd/Bot_ups_Lyonn) ![GitHub license](https://img.shields.io/github/license/juanchixd/Bot_ups_Lyonn) ![GitHub last commit](https://img.shields.io/github/last-commit/juanchixd/Bot_ups_Lyonn) ![GitHub repo size](https://img.shields.io/github/repo-size/juanchixd/Bot_ups_Lyonn)
 
@@ -21,6 +21,7 @@
     - [Python](#python)
       - [Install the required packages](#install-the-required-packages)
       - [Run the bot in the background](#run-the-bot-in-the-background)
+      - [API](#api)
   - [References](#references)
   - [Contributing](#contributing)
   - [Author](#author)
@@ -34,6 +35,8 @@
 This is a telegram bot that sends a message to a telegram chat when the power goes out and when it comes back on. In turn, it also stores information about the status, voltage, among other parameters, to have a history and to make analysis or graphs with them. It uses the Network UPS Tools (NUT) to monitor the UPS and send the messages.
 
 The bot is written in Python and uses the pyTelegramBotAPI library to interact with the Telegram API. The NUT is used to monitor the UPS and send the messages to the bot. The data is stored in a SQLite database.
+
+In turn, implements a graphic that shows the voltage of the UPS over time. This graphic is generated using the matplotlib library. I also implemented and API that returns the data in JSON format. This API can be used to create a custom frontend to display the data. The frontend can be a web page, a mobile app, or any other type of application that can consume an API. The API is implemented using the FastAPI library.
 
 This project is based on the [Network UPS Tools](https://networkupstools.org) software, which is a collection of programs that provide a common interface for monitoring and administering UPS hardware. The software is compatible with a wide range of UPS devices and is available for many operating systems.
 
@@ -60,6 +63,8 @@ Graphic
 - Use the Network UPS Tools (NUT) to monitor the UPS and send the messages.
 - Written in Python and uses the pyTelegramBotAPI library to interact with the Telegram API.
 - The data is stored in a SQLite database.
+- Implements a graphic that shows the voltage of the UPS over time.
+- Implements an API that returns the data in JSON format.
 
 ## Development
 
@@ -312,6 +317,24 @@ systemctl start lyonn_ups_bot
 
 The bot should now be running in the background.
 
+#### API
+
+The API is implemented using the FastAPI library, which is already running in the background. To access the API, open a web browser and go to `http://xxx.xxx.xxx.xxx:5005/` where `xxx.xxx.xxx.xxx` is the IP address of the proxmox container. You should see a page with the message "Hello, World!".
+
+To access the data, go to `http://xxx.xxx.xxx.xxx:5005/api/last_ups_data`, you should see a JSON response with the data. Example:
+  
+```json
+{
+"timestamp":"2024-08-15 19:10:50",
+"battery_charge":100.0,
+"battery_voltage":13.6,
+"input_voltage":235.2,
+"output_voltage":235.2,
+"ups_load":27.0,
+"ups_status":"OL"
+}
+```
+
 Any questions, you can contact me on [Telegram](https://t.me/Juanbgon)
 
 ## References
@@ -340,6 +363,7 @@ Please make sure to update tests as appropriate.
 - **eternnoir** - _For the pyTelegramBotAPI library_ - [eternnoir](https://github.com/eternnoir/pyTelegramBotAPI)
 - **Kreaweb** - _For the Proxmox tutorial_ - [Kreaweb](https://www.kreaweb.be/diy-home-server-2021-software-proxmox-ups/#a_Create_LXC_container)
 - **Network UPS Tools** - _For the NUT software_ - [Network UPS Tools](https://networkupstools.org)
+- **FastAPI** - _For the FastAPI library_ - [FastAPI](https://fastapi.tiangolo.com)
 - **Juan Blanc** & **Eze Fernandez** - _For the help with the development_ - [Juan Blanc](https://github.com/juanstdio) - [Eze Fernandez](https://github.com/ezefernandez93)
 
 ## License
