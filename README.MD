@@ -10,6 +10,7 @@
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Demo](#demo)
+  - [Screenshots](#screenshots)
   - [Features](#features)
   - [Development](#development)
     - [Proxmox](#proxmox)
@@ -44,7 +45,13 @@ This idea is based on a project that I found on the internet, but I made some ch
 
 You can test the bot by sending a message to the [Lyonn UPS Telegram Bot](https://t.me/Lyonn_UPS_bot) on Telegram.
 
-![Demo](img/1.png)
+## Screenshots
+
+![Demo](img/complete.png)
+
+Graphic
+
+![Demo](img/graph.png)
 
 ## Features
 
@@ -330,15 +337,15 @@ Please make sure to update tests as appropriate.
 ## Gratitudes
 
 - **heywhatsupo1235** - _For the solution to the NUT problem in proxmox_ - [heywhatsupo1235](https://forum.proxmox.com/threads/network-ups-tools-nut-as-ubuntu-22-04-lxc-container.152248/)
-- **eternnoir** - _For the pyTelegramBotAPI library_ - [eternnoir](
+- **eternnoir** - _For the pyTelegramBotAPI library_ - [eternnoir](https://github.com/eternnoir/pyTelegramBotAPI)
 - **Kreaweb** - _For the Proxmox tutorial_ - [Kreaweb](https://www.kreaweb.be/diy-home-server-2021-software-proxmox-ups/#a_Create_LXC_container)
 - **Network UPS Tools** - _For the NUT software_ - [Network UPS Tools](https://networkupstools.org)
-- **Juan Blanc** y **Eze Fernandez** - _For the help with the development_ - [Juan Blanc](https://github.com/juanstdio) - [Eze Fernandez](https://github.com/ezefernandez93)
+- **Juan Blanc** & **Eze Fernandez** - _For the help with the development_ - [Juan Blanc](https://github.com/juanstdio) - [Eze Fernandez](https://github.com/ezefernandez93)
 
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ```python
-# Lyonn UPS Telegram Bot
+# Lyonn UPS Telegram Bot - Developed by Juan Gonzalez
 ```
