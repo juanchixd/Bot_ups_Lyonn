@@ -19,6 +19,7 @@ from subprocess import Popen, PIPE
 
 load_dotenv()
 # Variables
+previous_status = None
 TOKEN = os.getenv('TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 
@@ -56,24 +57,35 @@ def get_ups_status():
     except Exception as e:
         return str(e)
 
-# Guardar el estado de la UPS en la base de datos
-# Save the UPS status in the database
 
-
-def save_ups_status():
-    status_aux = True
+def notify_ups_status():
+    global previous_status
     while True:
         try:
             status = get_ups_status()
-            if status['ups_status'] != 'OL' and status_aux == True:
+            if status['ups_status'] != 'OL' and previous_status == 'OL':
                 bot.send_message(
-                    CHAT_ID, f"La UPS está en estado de apagado")
-                status_aux = False
+                    CHAT_ID, f"¡ALERTA! ¡La UPS paso a modo batería!")
+                previous_status = status['ups_status']
             else:
-                if status_aux == False:
+                if status['ups_status'] == 'OL' and previous_status != 'OL':
                     bot.send_message(
-                        CHAT_ID, f"La UPS está en estado de encendido")
-                    status_aux = True
+                        CHAT_ID, f"¡La UPS volvió a modo normal!")
+                    previous_status = status['ups_status']
+            time.sleep(10)
+        except Exception as e:
+            bot.send_message(
+                CHAT_ID, f"Ocurrió un error al consultar el estado de la UPS: {e}")
+            time.sleep(10)
+
+
+# Guardar el estado de la UPS en la base de datos
+# Save the UPS status in the database
+
+def save_ups_status():
+    while True:
+        try:
+            status = get_ups_status()
             sql.save_status(status)
             time.sleep(300)
         except Exception as e:
@@ -82,6 +94,7 @@ def save_ups_status():
             time.sleep(300)
 
 
+threading.Thread(target=notify_ups_status, daemon=True).start()
 threading.Thread(target=save_ups_status, daemon=True).start()
 
 
