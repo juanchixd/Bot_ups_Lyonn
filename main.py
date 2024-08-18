@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import complements.api as api
 import complements.sql as sql
+
 from dotenv import load_dotenv, dotenv_values
 from subprocess import Popen, PIPE
 
@@ -23,6 +24,7 @@ load_dotenv()
 previous_status = None
 TOKEN = os.getenv('TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
+SUPABASE = os.getenv('SUPABASE')
 
 # Inicializar la api / Initialize the api
 threading.Thread(target=api.main, daemon=True).start()
@@ -91,6 +93,9 @@ def save_ups_status():
         try:
             status = get_ups_status()
             sql.save_status(status)
+            if SUPABASE == "True":
+                import complements.sql_supabase as sql_supabase
+                sql_supabase.upload_supabase(status)
             time.sleep(300)
         except Exception as e:
             bot.send_message(

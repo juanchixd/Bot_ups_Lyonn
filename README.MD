@@ -42,11 +42,15 @@ This project is based on the [Network UPS Tools](https://networkupstools.org) so
 
 The bot is running in a Proxmox container with Debian installed. The UPS is connected to the host and is passed through to the container. The bot is running in the container and is monitoring the UPS using NUT.
 
-This idea is based on a project that I found on the internet, but I made some changes to adapt it to my needs. The original project is [here](https://github.com/juanstdio/UPS_TelegramBot/tree/main) created by [Juan Blanc](https://github.com/juanstdio)
+This idea is based on a project that I found on the internet, but I made some changes to adapt it to my needs. The original project is [here](https://github.com/juanstdio/UPS_TelegramBot/tree/main) created by [Juan Blanc](https://github.com/juanstdio).
+
+I also implemented a backup database in supabase, in another project I use this database to show the data in a web page [here](https://github.com/juanchixd/UPS_Lyonn_web).
 
 ## Demo
 
 You can test the bot by sending a message to the [Lyonn UPS Telegram Bot](https://t.me/Lyonn_UPS_bot) on Telegram.
+
+And you can test the API by going to `http://api.juangonzalez.com.ar/docs` where you can see the documentation of the API and the example of the data.
 
 ## Screenshots
 
@@ -55,6 +59,10 @@ You can test the bot by sending a message to the [Lyonn UPS Telegram Bot](https:
 Graphic
 
 ![Demo](img/graph.png)
+
+API gauges
+
+![Demo](img/gauges.png)
 
 ## Features
 
@@ -65,6 +73,7 @@ Graphic
 - The data is stored in a SQLite database.
 - Implements a graphic that shows the voltage of the UPS over time.
 - Implements an API that returns the data in JSON format.
+- Implements backup database in supabase (in other project i use this database to show the data in a web page [here](https://github.com/juanchixd/UPS_Lyonn_web)).
 
 ## Development
 
@@ -274,7 +283,12 @@ In the .env file, change the following lines
 ```bash
 TOKEN= YOUR_TELEGRAM_BOT_TOKEN
 CHAT_ID= YOUR_TELEGRAM_CHAT_ID
+SUPABASE = TRUE or FALSE
+SUPABASE_URL= YOUR_SUPABASE_URL
+SUPABASE_KEY= YOUR_SUPABASE_KEY
 ```
+
+The SUPABASE_URL and SUPABASE_KEY are optional, if you want to use the supabase database, you need to change the SUPABASE to TRUE and add the URL and the KEY.
 
 Finally, run the bot:
 
@@ -335,6 +349,10 @@ To access the data, go to `http://xxx.xxx.xxx.xxx:5005/api/last_ups_data`, you s
 }
 ```
 
+You can also access the API documentation by going to `http://xxx.xxx.xxx.xxx:5005/docs`. You should see a page with the documentation of the API.
+
+And that's it! The bot and the API are now running in the proxmox container and you can access them from a web browser.
+
 Any questions, you can contact me on [Telegram](https://t.me/Juanbgon)
 
 ## References
@@ -344,6 +362,8 @@ Any questions, you can contact me on [Telegram](https://t.me/Juanbgon)
 - [pyTelegramBotAPI](https://github.com/eternnoir/pyTelegramBotAPI)
 - [SQLite](https://www.sqlite.org)
 - [Python](https://www.python.org)
+- [FastAPI](https://fastapi.tiangolo.com)
+- [Supabase](https://supabase.io)
 - <https://forum.proxmox.com/threads/network-ups-tools-nut-as-ubuntu-22-04-lxc-container.152248/>
 - <https://www.kreaweb.be/diy-home-server-2021-software-proxmox-ups/#a_Create_LXC_container>
 
@@ -364,6 +384,7 @@ Please make sure to update tests as appropriate.
 - **Kreaweb** - _For the Proxmox tutorial_ - [Kreaweb](https://www.kreaweb.be/diy-home-server-2021-software-proxmox-ups/#a_Create_LXC_container)
 - **Network UPS Tools** - _For the NUT software_ - [Network UPS Tools](https://networkupstools.org)
 - **FastAPI** - _For the FastAPI library_ - [FastAPI](https://fastapi.tiangolo.com)
+- **Supabase** - _For the supabase database_ - [Supabase](https://supabase.io)
 - **Juan Blanc** & **Eze Fernandez** - _For the help with the development_ - [Juan Blanc](https://github.com/juanstdio) - [Eze Fernandez](https://github.com/ezefernandez93)
 
 ## License
@@ -371,5 +392,5 @@ Please make sure to update tests as appropriate.
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ```python
-# Lyonn UPS Telegram Bot - Developed by Juan Gonzalez
+# Lyonn UPS Telegram Bot - Developed by Juan Gonzalez with the helf of Juan Blanc and Eze Fernandez - © 2024
 ```
