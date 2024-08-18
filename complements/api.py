@@ -9,9 +9,39 @@ Created on 2024
 
 import uvicorn
 from complements.sql import last
+import subprocess
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 import plotly.graph_objects as go
+
+
+def get_ups_status():
+    try:
+        # Obtener el estado de la UPS
+        # Get the UPS status
+        result = subprocess.run(
+            ['upsc', 'ups@localhost'], capture_output=True, text=True)
+        output = result.stdout.splitlines()
+
+        # Extraer los datos del estado de la UPS
+        # Extract the UPS status data
+        status_data = {}
+        status_data['battery_charge'] = [line.split(
+            ": ")[1] for line in output if "battery.charge:" in line][0]
+        status_data['battery_voltage'] = [line.split(
+            ": ")[1] for line in output if "battery.voltage:" in line][0]
+        status_data['input_voltage'] = [line.split(
+            ": ")[1] for line in output if "input.voltage:" in line][0]
+        status_data['output_voltage'] = [line.split(
+            ": ")[1] for line in output if "output.voltage:" in line][0]
+        status_data['ups_load'] = [line.split(
+            ": ")[1] for line in output if "ups.load:" in line][0]
+        status_data['ups_status'] = [line.split(
+            ": ")[1] for line in output if "ups.status:" in line][0]
+        return status_data
+    except Exception as e:
+        return str(e)
+
 
 tags_metadata = [
     {
@@ -48,6 +78,34 @@ app = FastAPI(
 @app.get("/", tags=["Hello World"])
 async def root():
     return {"message": "Hello World"}
+
+
+@app.get("/api/realtime_data", tags=["UPS"], responses={
+    200: {
+        "description": "Response",
+        "content": {
+            "application/json": {
+                "example": {
+                    "timestamp": "2024-08-15 19:10:50",
+                    "battery_charge": 100.0,
+                    "battery_voltage": 13.6,
+                    "input_voltage": 235.2,
+                    "output_voltage": 235.2,
+                    "ups_load": 27.0,
+                    "ups_status": "OL"
+                }
+            }
+        }
+    }
+})
+def realtime_data():
+    # Obtiene el último registro
+    # Get the last record
+    data = get_ups_status()
+    # Retorna los datos si existen, de lo contrario, retorna un error 404
+    # Returns the data if it exists, otherwise, returns a 404 error
+    return data if data else HTTPException(
+        status_code=404, detail="No se encontraron registros")
 
 
 @app.get("/api/last_ups_data", tags=["UPS"], responses={
