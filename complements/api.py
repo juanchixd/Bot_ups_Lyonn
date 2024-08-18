@@ -10,6 +10,8 @@ Created on 2024
 import uvicorn
 from complements.sql import last
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+import plotly.graph_objects as go
 
 tags_metadata = [
     {
@@ -20,6 +22,9 @@ tags_metadata = [
         "name": "UPS",
         "description": "Obtener el estado de la UPS",
     },
+    {"name": "Gauges",
+        "description": "Obtener los indicadores de la UPS"
+     }
 ]
 
 
@@ -79,6 +84,149 @@ def last_ups_data():
     # Returns the data if it exists, otherwise, returns a 404 error
     return data if data else HTTPException(
         status_code=404, detail="No se encontraron registros")
+
+
+@app.get("/gauge", response_class=HTMLResponse, tags=["Gauges"])
+async def create_gauge():
+    # Obtiene el último registro / Get the last record
+    data = last()
+
+    gauges = []
+
+    # Crea el indicador para la carga de la UPS / Create the indicator for the UPS load
+    fig1 = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=data["ups_load"],
+        title={'text': 'UPS Load', 'font': {'color': 'white'}},
+        gauge={'axis': {'range': [None, 100], 'tickcolor': 'white'},
+               'bar': {'color': '#4a4a48'},
+               'bgcolor': 'black',
+               'borderwidth': 2,
+               'bordercolor': 'gray',
+               'steps': [
+            {'range': [0, 60], 'color': '#4CAF50'},
+            {'range': [60, 80], 'color': '#FFBF00'},
+            {'range': [80, 100], 'color': '#FF4C4C'}]
+        }
+    ))
+
+    fig1.update_layout(
+        paper_bgcolor="black",
+        plot_bgcolor="black",
+        font=dict(color="white"),
+        autosize=True,
+        margin=dict(l=20, r=20, t=50, b=50)
+    )
+
+    gauges.append(fig1.to_html(full_html=False, config={"responsive": True}))
+
+    # Crea el indicador para la carga de la batería / Create the indicator for the battery charge
+    fig2 = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=data["battery_charge"],
+        title={'text': 'Battery Charge', 'font': {'color': 'white'}},
+        gauge={
+            'axis': {'range': [None, 100], 'tickcolor': 'white'},
+            'bar': {'color': '#4a4a48'},
+            'bgcolor': 'black',
+            'borderwidth': 2,
+            'bordercolor': 'gray',
+            'steps': [
+                {'range': [0, 20], 'color': '#FF4C4C'},
+                {'range': [20, 50], 'color': '#FFBF00'},
+                {'range': [50, 100], 'color': '#4CAF50'}
+            ]
+        }
+    ))
+
+    fig2.update_layout(
+        paper_bgcolor="black",
+        plot_bgcolor="black",
+        font=dict(color="white"),
+        autosize=True,
+        margin=dict(l=20, r=20, t=50, b=50)
+    )
+    gauges.append(fig2.to_html(full_html=False, config={"responsive": True}))
+
+    # Crea el indicador para el voltaje de entrada / Create the indicator for the input voltage
+    fig3 = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=data["input_voltage"],
+        title={'text': 'Input Voltage', 'font': {'color': 'white'}},
+        gauge={'axis': {'range': [170, 270], 'tickcolor': 'white'},
+               'bar': {'color': '#4a4a48'},
+               'bgcolor': 'black',
+               'borderwidth': 2,
+               'bordercolor': 'gray',
+               'steps': [
+            {'range': [170, 190], 'color': '#FF4C4C'},
+            {'range': [190, 200], 'color': '#FFBF00'},
+            {'range': [200, 240], 'color': '#4CAF50'},
+            {'range': [240, 250], 'color': '#FFBF00'},
+            {'range': [250, 270], 'color': '#FF4C4C'}]
+        }
+    ))
+
+    fig3.update_layout(
+        paper_bgcolor="black",
+        plot_bgcolor="black",
+        font=dict(color="white"),
+        autosize=True,
+        margin=dict(l=20, r=20, t=50, b=50)
+    )
+
+    gauges.append(fig3.to_html(full_html=False, config={"responsive": True}))
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Gauges</title>
+        <style>
+            body {{
+                background-color: black;
+                color: white;
+                margin: 0;
+                padding: 0;
+                font-family: Arial, sans-serif;
+            }}
+            .gauge-container {{
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                align-items: center;
+                gap: 20px;
+            }}
+            .gauge {{
+                width: 100%;
+                max-width: 300px;
+                box-sizing: border-box;
+            }}
+            @media (max-width: 768px) {{
+                .gauge-container {{
+                    flex-direction: column;
+                    align-items: center;
+                }}
+                .gauge {{
+                    width: 80%;
+                }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="gauge-container">
+            <div class="gauge">{gauges[0]}</div>
+            <div class="gauge">{gauges[1]}</div>
+            <div class="gauge">{gauges[2]}</div>
+        </div>
+        
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 
 def main():
