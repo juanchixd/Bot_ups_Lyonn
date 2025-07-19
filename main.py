@@ -69,6 +69,15 @@ def notify_ups_status():
     while True:
         try:
             status = get_ups_status()
+            if not isinstance(status, dict):
+                if len(status) > 4000:
+                    status = status[:4000] + "..."
+                # Enviar mensaje de error al chat de Telegram
+                # Send error message to Telegram chat
+                bot.send_message(
+                    CHAT_ID, f"Ocurrió un error al obtener el estado de la UPS: {status}")
+                time.sleep(10)
+                continue
             if status['ups_status'] != 'OL' and previous_status == 'OL':
                 bot.send_message(
                     CHAT_ID, f"¡ALERTA! ¡La UPS paso a modo batería!")
@@ -80,6 +89,8 @@ def notify_ups_status():
                     previous_status = status['ups_status']
             time.sleep(10)
         except Exception as e:
+            if len(str(e)) > 4000:
+                e = str(e)[:4000] + "..."
             bot.send_message(
                 CHAT_ID, f"Ocurrió un error al consultar el estado de la UPS: {e}")
             time.sleep(10)
