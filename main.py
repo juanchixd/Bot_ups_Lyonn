@@ -78,14 +78,36 @@ def notify_ups_status():
                     CHAT_ID, f"Ocurrió un error al obtener el estado de la UPS: {status}")
                 time.sleep(10)
                 continue
+            # Verificar si pasó a batería
             if status['ups_status'] != 'OL' and previous_status == 'OL':
+                try:
+                    input_voltage = float(status['input_voltage'])
+                except ValueError:
+                    input_voltage = None
+
+                # Determinar la causa: falta de luz o sobretensión
+                if input_voltage is not None:
+                    if input_voltage < 170:
+                        causa = "Falta de energía eléctrica (bajo voltaje)"
+                    elif input_voltage > 260:
+                        causa = "Sobretensión en la línea"
+                    else:
+                        causa = "Causa desconocida (voltaje dentro de rango)"
+                else:
+                    causa = "No se pudo leer el voltaje de entrada"
+
                 bot.send_message(
-                    CHAT_ID, f"¡ALERTA! ¡La UPS paso a modo batería!")
+                    CHAT_ID,
+                    f"⚠️ ¡ALERTA! ¡La UPS pasó a modo batería!\nMotivo: {causa}\nVoltaje de entrada: {status['input_voltage']} V"
+                )
                 previous_status = status['ups_status']
+
             else:
+                # Detectar si volvió a modo normal
                 if status['ups_status'] == 'OL' and previous_status != 'OL':
                     bot.send_message(
-                        CHAT_ID, f"¡La UPS volvió a modo normal!")
+                        CHAT_ID, f"✅ ¡La UPS volvió a modo normal!"
+                    )
                     previous_status = status['ups_status']
             time.sleep(10)
         except Exception as e:
