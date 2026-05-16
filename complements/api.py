@@ -8,7 +8,7 @@ Created on 2024
 # Importar librerías / Import libraries
 
 import uvicorn
-from complements.sql import last
+from complements.sql import last, get_by_date_range
 import subprocess
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -286,6 +286,19 @@ async def create_gauge():
     """
     return HTMLResponse(content=html_content)
 
+@app.get("/api/history", tags=["UPS"])
+def history_data(start: str, end: str):
+    """
+    Fechas en formato: YYYY-MM-DD HH:MM:SS
+    Ejemplo: /api/history?start=2026-05-10 00:00:00&end=2026-05-15 23:59:59
+    """
+    try:
+        data = get_by_date_range(start, end)
+        if not data:
+            raise HTTPException(status_code=404, detail="No se encontraron registros en este rango")
+        return data
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido. Usa YYYY-MM-DD HH:MM:SS")
 
 def main():
     uvicorn.run(app, host="0.0.0.0", port=5005)

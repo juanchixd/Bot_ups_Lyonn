@@ -6,100 +6,99 @@ Created on 2024
     - Email: contacto@juangonzalez.com.ar
 """
 
-import sqlite3
+import os
+from datetime import datetime, timedelta
+from sqlalchemy import create_engine, Column, Float, String, DateTime, Integer
+from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
 
-# Variable global
-# Global variable
-NAME = 'ups_data.db'
+load_dotenv()
 
-# Inicializar la base de datos
-# Initialize the database
+# Conexión a PostgreSQL
+DATABASE_URL = os.getenv('POSTGRES_URL')
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
+# Modelo de la base de datos
+class UPSStatus(Base):
+    __tablename__ = 'ups_status'
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    timestamp = Column(DateTime, index=True, default=datetime.now)
+    battery_charge = Column(Float)
+    battery_voltage = Column(Float)
+    input_voltage = Column(Float)
+    output_voltage = Column(Float)
+    ups_load = Column(Float)
+    ups_status = Column(String)
 
 def init_db():
-    # Conectar a la base de datos (o crearla si no existe)
-    # Connect to the database (or create it if it doesn't exist)
-    conn = sqlite3.connect('ups_data.db')
-    cursor = conn.cursor()
-
-    # Crear la tabla para almacenar los datos
-    # Create the table to store the data
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS ups_status (
-            timestamp DATETIME DEFAULT (DATETIME(CURRENT_TIMESTAMP, '-3 hours')),
-            battery_charge FLOAT,
-            battery_voltage FLOAT,
-            input_voltage FLOAT,
-            output_voltage FLOAT,
-            ups_load FLOAT,
-            ups_status TEXT
-        )
-    ''')
-
-    conn.commit()
-    conn.close()
-
-# Guardar el estado de la UPS en la base de datos
-# Save the UPS status in the database
-
+    # Crea las tablas si no existen
+    Base.metadata.create_all(bind=engine)
 
 def save_status(data):
-    # Conectar a la base de datos
-    # Connect to the database
-    conn = sqlite3.connect(NAME)
-    cursor = conn.cursor()
-
-    # Insertar los datos en la tabla
-    # Insert the data into the table
-    cursor.execute('''
-        INSERT INTO ups_status (battery_charge, battery_voltage, input_voltage, output_voltage, ups_load, ups_status)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (data['battery_charge'], data['battery_voltage'], data['input_voltage'], data['output_voltage'], data['ups_load'], data['ups_status']))
-
-    conn.commit()
-    conn.close()
-
+    db = SessionLocal()
+    try:
+        nuevo_estado = UPSStatus(
+            battery_charge=float(data['battery_charge']),
+            battery_voltage=float(data['battery_voltage']),
+            input_voltage=float(data['input_voltage']),
+            output_voltage=float(data['output_voltage']),
+            ups_load=float(data['ups_load']),
+            ups_status=data['ups_status']
+        )
+        db.add(nuevo_estado)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error guardando en Postgres: {e}")
+    finally:
+        db.close()
 
 def last_24():
-    conn = sqlite3.connect(NAME)
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT timestamp, output_voltage, battery_charge, ups_load
-        FROM ups_status WHERE timestamp >= datetime('now', '-1 day')
-    ''')
-    data = cursor.fetchall()
-    conn.close()
-    return data
-
+    db = SessionLocal()
+    try:
+        hace_24h = datetime.now() - timedelta(days=1)
+        registros = db.query(UPSStatus).filter(UPSStatus.timestamp >= hace_24h).order_by(UPSStatus.timestamp.asc()).all()
+        return [(str(r.timestamp), r.output_voltage, r.battery_charge, r.ups_load) for r in registros]
+    finally:
+        db.close()
 
 def last():
-    conn = sqlite3.connect(NAME)
-    cursor = conn.cursor()
-    cursor.execute(
-        '''SELECT * FROM ups_status ORDER BY timestamp DESC LIMIT 1''')
-    row = cursor.fetchone()
-    conn.close()
-    data = {
-        "timestamp": row[0],
-        "battery_charge": row[1],
-        "battery_voltage": row[2],
-        "input_voltage": row[3],
-        "output_voltage": row[4],
-        "ups_load": row[5],
-        "ups_status": row[6]
-    }
-    return data
+    db = SessionLocal()
+    try:
+        r = db.query(UPSStatus).order_by(UPSStatus.timestamp.desc()).first()
+        if r:
+            return {
+                "timestamp": str(r.timestamp),
+                "battery_charge": r.battery_charge,
+                "battery_voltage": r.battery_voltage,
+                "input_voltage": r.input_voltage,
+                "output_voltage": r.output_voltage,
+                "ups_load": r.ups_load,
+                "ups_status": r.ups_status
+            }
+        return None
+    finally:
+        db.close()
 
-
-# Testing the database initialization and data saving
-if __name__ == '__main__':
-    init_db()
-    print('Database initialized!')
-    save_status({
-        'battery_charge': 100.0,
-        'battery_voltage': 13.5,
-        'input_voltage': 220.0,
-        'output_voltage': 220.0,
-        'ups_load': 50.0,
-        'ups_status': 'ONLINE'
-    })
+def get_by_date_range(start_date: str, end_date: str):
+    db = SessionLocal()
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
+        
+        registros = db.query(UPSStatus).filter(UPSStatus.timestamp.between(start_dt, end_dt)).order_by(UPSStatus.timestamp.asc()).all()
+        
+        return [{
+            "timestamp": str(r.timestamp),
+            "battery_charge": r.battery_charge,
+            "battery_voltage": r.battery_voltage,
+            "input_voltage": r.input_voltage,
+            "output_voltage": r.output_voltage,
+            "ups_load": r.ups_load,
+            "ups_status": r.ups_status
+        } for r in registros]
+    finally:
+        db.close()
