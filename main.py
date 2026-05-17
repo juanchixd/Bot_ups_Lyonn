@@ -13,6 +13,9 @@ import threading
 import time
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import pandas as pd
+import numpy as np
+from scipy.interpolate import PchipInterpolator
 import complements.api as api
 import complements.sql as sql
 
@@ -34,7 +37,6 @@ bot = telebot.TeleBot(TOKEN)
 
 # Inicializar la base de datos / Initialize the database
 sql.init_db()
-
 
 def get_ups_status():
     try:
@@ -177,95 +179,106 @@ def send_status(message):
 
 @bot.message_handler(commands=['graph'])
 def send_graph(message):
+    # time_now = time.time()
     data = sql.last_24()
-    if data:
-        timestamps, output_voltages, battery_charges, ups_loads = zip(*data)
+    # time_post_query = time.time()
+    if not data:
+        bot.reply_to(message, "No hay datos disponibles para generar el gráfico.")
+        return
 
-        # Convertir timestamps a objetos datetime / Convert timestamps to datetime objects
-        timestamps = [mdates.datestr2num(ts) for ts in timestamps]
+    # Desempaquetar datos
+    timestamps_str, output_voltages, battery_charges, ups_loads = zip(*data)
+    
+    # Armamos un DataFrame y borramos duplicados de tiempo exacto (necesario para poder suavizar las curvas)
+    df = pd.DataFrame({
+        'ts': pd.to_datetime(timestamps_str, format='mixed'),
+        'volt': output_voltages,
+        'bat': battery_charges,
+        'load': ups_loads
+    }).drop_duplicates(subset=['ts']).sort_values(by='ts')
 
-        plt.figure(figsize=(10, 8))
+    # Convertir las fechas a formato numérico para la matemática de la curva
+    x_num = mdates.date2num(df['ts'])
+    # Crear un eje X súper denso (300 puntos) para que la curva se dibuje fluida
+    x_smooth = np.linspace(x_num.min(), x_num.max(), 300)
+    timestamps_smooth = mdates.num2date(x_smooth)
 
-        # Configurar formato del eje X / Configure X axis format
-        locator = mdates.HourLocator(interval=2)
-        formatter = mdates.DateFormatter('%H:%M')
+    # Configuración de estilo Light Mode amigable
+    plt.style.use('default')
+    fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+    
+    # Color de fondo blanco tiza
+    bg_color = '#f8f9fa'
+    fig.patch.set_facecolor(bg_color)
+    
+    # Paleta de colores estéticos
+    c_volt = '#0077b6' # Azul Océano
+    c_bat = '#2a9d8f'  # Verde Esmeralda apagado
+    c_load = '#e76f51' # Naranja Terracota
 
-        # Gráfico del voltaje de salida / Output voltage graph
-        plt.subplot(3, 1, 1)
-        plt.plot(timestamps, output_voltages,
-                 label='Voltaje de salida (V)', color='blue')
-        plt.ylabel('Voltaje (V)')
-        plt.grid(True)
-        plt.gca().xaxis.set_major_locator(locator)
-        plt.gca().xaxis.set_major_formatter(formatter)
-        plt.gca().xaxis.set_ticklabels([])
+    def marcar_extremos(ax, x_real, y_real, color, unidad):
+        max_y, min_y = max(y_real), min(y_real)
+        idx_max, idx_min = list(y_real).index(max_y), list(y_real).index(min_y)
+        max_x, min_x = x_real.iloc[idx_max], x_real.iloc[idx_min]
+        
+        # Puntos resaltados (se marcan sobre los datos reales, no los suavizados)
+        ax.plot(max_x, max_y, marker='o', color=color, markersize=7, markeredgecolor='white', markeredgewidth=1.5)
+        ax.plot(min_x, min_y, marker='o', color=color, markersize=7, markeredgecolor='white', markeredgewidth=1.5)
+        
+        # Textos con fondo semitransparente para que no se pisen con las líneas
+        bbox_props = dict(boxstyle="round,pad=0.3", fc="white", ec="none", alpha=0.8)
+        ax.annotate(f'Max: {max_y}{unidad}', xy=(max_x, max_y), xytext=(0, 10), 
+                    textcoords='offset points', ha='center', color=color, fontsize=9, fontweight='bold', bbox=bbox_props)
+        ax.annotate(f'Min: {min_y}{unidad}', xy=(min_x, min_y), xytext=(0, -18), 
+                    textcoords='offset points', ha='center', color=color, fontsize=9, fontweight='bold', bbox=bbox_props)
 
-        # Marcar el punto máximo y mínimo del voltaje de salida / Mark the maximum and minimum output voltage point
-        max_voltage = max(output_voltages)
-        min_voltage = min(output_voltages)
-        max_time_voltage = timestamps[output_voltages.index(max_voltage)]
-        min_time_voltage = timestamps[output_voltages.index(min_voltage)]
-        plt.plot(max_time_voltage, max_voltage, 'ro')
-        plt.plot(min_time_voltage, min_voltage, 'go')
-        plt.annotate(f'Max: {max_voltage}V', xy=(max_time_voltage, max_voltage), xytext=(max_time_voltage, max_voltage + 2),
-                     arrowprops=dict(facecolor='black', shrink=0.05, width=1, headwidth=5))
-        plt.annotate(f'Min: {min_voltage}V', xy=(min_time_voltage, min_voltage), xytext=(min_time_voltage, min_voltage - 2),
-                     arrowprops=dict(facecolor='black', shrink=0.05, width=1, headwidth=5))
+    # Configurar cada subgráfico
+    graficos = [
+        (axs[0], df['volt'], c_volt, 'Voltaje de salida (V)', 'V'),
+        (axs[1], df['bat'], c_bat, 'Carga de la batería (%)', '%'),
+        (axs[2], df['load'], c_load, 'Consumo de la UPS (%)', '%')
+    ]
 
-        # Gráfico de la carga de la batería / Battery charge graph
-        plt.subplot(3, 1, 2)
-        plt.plot(timestamps, battery_charges,
-                 label='Carga de la batería (%)', color='green')
-        plt.ylabel('Carga (%)')
-        plt.grid(True)
-        plt.gca().xaxis.set_major_locator(locator)
-        plt.gca().xaxis.set_major_formatter(formatter)
-        plt.gca().xaxis.set_ticklabels([])
+    for ax, y_data, color, titulo, unidad in graficos:
+        ax.set_facecolor(bg_color)
+        
+        # Magia matemática: Crear la curva suave usando interpolación PCHIP
+        interpolador = PchipInterpolator(x_num, y_data)
+        y_smooth = interpolador(x_smooth)
+        
+        # Dibujar la curva suave y rellenar abajo
+        ax.plot(timestamps_smooth, y_smooth, color=color, linewidth=2.5)
+        ax.fill_between(timestamps_smooth, y_smooth, color=color, alpha=0.1)
+        
+        # Títulos
+        ax.set_title(titulo, color='#333333', pad=12, fontsize=12, fontweight='bold')
+        
+        # Grilla clarita
+        ax.grid(color='#e9ecef', linestyle='-', linewidth=1.2)
+        
+        # Ocultar bordes innecesarios (estilo dashboard minimalista)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color('#ced4da')
+        ax.spines['bottom'].set_color('#ced4da')
+        ax.tick_params(colors='#6c757d')
+        
+        marcar_extremos(ax, df['ts'], y_data, color, unidad)
 
-        # Marcar el punto máximo y mínimo de la carga de la batería / Mark the maximum and minimum battery charge point
-        max_charge = max(battery_charges)
-        min_charge = min(battery_charges)
-        max_time_charge = timestamps[battery_charges.index(max_charge)]
-        min_time_charge = timestamps[battery_charges.index(min_charge)]
-        plt.plot(max_time_charge, max_charge, 'ro')
-        plt.plot(min_time_charge, min_charge, 'go')
-        plt.annotate(f'Max: {max_charge}%', xy=(max_time_charge, max_charge), xytext=(max_time_charge, max_charge + 2),
-                     arrowprops=dict(facecolor='black', shrink=0.05, width=1, headwidth=5))
-        plt.annotate(f'Min: {min_charge}%', xy=(min_time_charge, min_charge), xytext=(min_time_charge, min_charge - 2),
-                     arrowprops=dict(facecolor='black', shrink=0.05, width=1, headwidth=5))
+    # Formato del eje X (Fechas)
+    axs[2].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+    plt.xticks(rotation=45, color='#6c757d')
 
-        # Gráfico del consumo (carga de la UPS) / UPS load graph
-        plt.subplot(3, 1, 3)
-        plt.plot(timestamps, ups_loads,
-                 label='Consumo de la UPS (%)', color='red')
-        plt.ylabel('Consumo (%)')
-        plt.xlabel('Hora')
-        plt.xticks(rotation=45)
-        plt.grid(True)
-        plt.gca().xaxis.set_major_locator(locator)
-        plt.gca().xaxis.set_major_formatter(formatter)
+    plt.tight_layout()
+    
+    # Guardar imagen
+    plt.savefig('graph.png', bbox_inches='tight', facecolor=fig.get_facecolor(), dpi=120)
+    plt.close()
+    # time_post_graph = time.time()
+    # Enviar foto
+    with open('graph.png', 'rb') as photo:
+        bot.send_photo(message.chat.id, photo)
 
-        # Marcar el punto máximo y mínimo del consumo de la UPS / Mark the maximum and minimum UPS load point
-        max_load = max(ups_loads)
-        min_load = min(ups_loads)
-        max_time_load = timestamps[ups_loads.index(max_load)]
-        min_time_load = timestamps[ups_loads.index(min_load)]
-        plt.plot(max_time_load, max_load, 'ro')
-        plt.plot(min_time_load, min_load, 'go')
-        plt.annotate(f'Max: {max_load}%', xy=(max_time_load, max_load), xytext=(max_time_load, max_load + 2),
-                     arrowprops=dict(facecolor='black', shrink=0.05, width=1, headwidth=5))
-        plt.annotate(f'Min: {min_load}%', xy=(min_time_load, min_load), xytext=(min_time_load, min_load - 2),
-                     arrowprops=dict(facecolor='black', shrink=0.05, width=1, headwidth=5))
-
-        plt.tight_layout()
-        plt.savefig('graph.png', bbox_inches='tight')
-        plt.close()
-
-        with open('graph.png', 'rb') as photo:
-            bot.send_photo(message.chat.id, photo)
-    else:
-        bot.reply_to(
-            message, "No hay datos disponibles para generar el gráfico")
-
+    # bot.send_message(message.chat.id, f"Tiempo para consulta: {time_post_query - time_now:.2f} segundos\nTiempo para generar gráfico: {time_post_graph - time_post_query:.2f} segundos")
 
 bot.infinity_polling()
